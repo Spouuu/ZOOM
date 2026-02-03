@@ -7,6 +7,8 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.Timer;
+
 
 import static game.Enemy.State.DEAD;
 
@@ -32,6 +34,14 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     private BufferedImage guardHit;
     private BufferedImage guardIdle;
     private BufferedImage guardDead;
+
+    private BufferedImage pistolIdle;
+    private BufferedImage pistolShoot;
+    private BufferedImage currentWeaponSprite;
+    private BufferedImage shotgunIdle;
+    private BufferedImage shotgunShoot;
+
+
 
     private List<game.Enemy> enemies = new ArrayList<>();
     private double[] zBuffer = new double[WIDTH];
@@ -77,6 +87,16 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             eliteHit   = ImageIO.read(getClass().getResource("/sprites/elite-hit.png"));
             eliteDead  = ImageIO.read(getClass().getResource("/sprites/elite-dead.png"));
 
+            //Gun sprites
+            pistolIdle  = ImageIO.read(getClass().getResource("/sprites/weapons/pistol-idle.png"));
+            pistolShoot = ImageIO.read(getClass().getResource("/sprites/weapons/pistol-shoot.png"));
+            shotgunIdle  = ImageIO.read(getClass().getResource("/sprites/weapons/shotgun-idle.png"));
+            shotgunShoot = ImageIO.read(getClass().getResource("/sprites/weapons/shotgun-shoot.png"));
+
+
+            currentWeaponSprite = pistolIdle;
+
+
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);
@@ -88,15 +108,6 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     public void start() {
         thread = new Thread(this);
         thread.start();
-    }
-    @Override
-    public void mousePressed(MouseEvent e) {
-        if (e.getButton() == MouseEvent.BUTTON1) { // left click
-            if (player.canShoot()) {
-                player.shoot(enemies);
-                player.lastShotTime = System.currentTimeMillis();
-            }
-        }
     }
 
     @Override
@@ -116,6 +127,23 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             e.update(player, map);
         }
     }
+
+    private void drawWeapon(Graphics2D g) {
+        int weaponWidth = 256;
+        int weaponHeight = 192;
+
+        if (player.currentWeapon.type == game.WeaponType.SHOTGUN) {
+            weaponWidth = 320;
+            weaponHeight = 200;
+        }
+
+        int x = WIDTH / 2 - weaponWidth / 2;
+        int y = HEIGHT - weaponHeight;
+
+        g.drawImage(currentWeaponSprite, x, y, weaponWidth, weaponHeight, null);
+    }
+
+
 
 
 
@@ -183,6 +211,9 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
 
             g.drawImage(tex, sx - size/2, sy, size, size, null);
         }
+        drawHUD(g);
+        drawWeapon(g);
+
     }
     private void drawHUD(Graphics2D g) {
         int barWidth = 200;
@@ -321,22 +352,50 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             tryOpenDoor();
         }
         player.keyPressed(e);
-        if (e.getKeyCode() == KeyEvent.VK_1)
+        if (e.getKeyCode() == KeyEvent.VK_1) {
             player.currentWeapon = new game.Weapon(game.WeaponType.PISTOL);
+            currentWeaponSprite = pistolIdle;
+        }
 
-        if (e.getKeyCode() == KeyEvent.VK_2)
+        if (e.getKeyCode() == KeyEvent.VK_2) {
             player.currentWeapon = new game.Weapon(game.WeaponType.SHOTGUN);
+            currentWeaponSprite = shotgunIdle;
+        }
+    }
 
-        if (e.getKeyCode() == KeyEvent.VK_3)
-            player.currentWeapon = new game.Weapon(game.WeaponType.CHAINGUN);
+    @Override
+    public void mousePressed(MouseEvent e) {
+        if (e.getButton() == MouseEvent.BUTTON1 && player.canShoot()) {
+            player.shoot(enemies);
+
+            if (player.currentWeapon.type == game.WeaponType.PISTOL) {
+                currentWeaponSprite = pistolShoot;
+            } else if (player.currentWeapon.type == game.WeaponType.SHOTGUN) {
+                currentWeaponSprite = shotgunShoot;
+            }
+
+            new Timer(120, ev -> {
+                if (player.currentWeapon.type == game.WeaponType.PISTOL)
+                    currentWeaponSprite = pistolIdle;
+                else
+                    currentWeaponSprite = shotgunIdle;
+
+                ((Timer) ev.getSource()).stop();
+            }).start();
+        }
 
     }
 
+
+
     @Override public void keyReleased(KeyEvent e) { player.keyReleased(e); }
     @Override public void keyTyped(KeyEvent e) {}
-
     @Override public void mouseReleased(MouseEvent e) {}
-    @Override public void mouseClicked(MouseEvent e) {}
     @Override public void mouseEntered(MouseEvent e) {}
     @Override public void mouseExited(MouseEvent e) {}
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        // nieużywane
+    }
+
 }

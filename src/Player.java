@@ -12,6 +12,8 @@ public class Player {
     public int hp = 100;
     public int maxHp = 100;
     public int ammo = 50;
+    public boolean shooting = false;
+    public long shootAnimTime = 0;
     public boolean hasKey = false;
     public long lastShotTime = 0;
     private static final long SHOOT_COOLDOWN = 250;
@@ -85,24 +87,29 @@ public class Player {
 
 
     public void shoot(List<game.Enemy> enemies) {
-        if (!currentWeapon.canShoot()) return;
+        if (!canShoot()) return;
 
-        currentWeapon.lastShot = System.currentTimeMillis();
+        lastShotTime = System.currentTimeMillis();
 
-        for (int i = 0; i < currentWeapon.pellets; i++) {
+        if (currentWeapon.type == game.WeaponType.SHOTGUN) {
+            for (int i = 0; i < 6; i++) {
+                double spread = (Math.random() - 0.5) * 0.4;
+                double rayAngle = angle + spread;
 
-            double angleOffset =
-                    (Math.random() - 0.5) * currentWeapon.spread;
-
-            double rayAngle = angle + angleOffset;
-
-            game.Enemy hit = castShot(rayAngle, enemies);
+                game.Enemy hit = castShot(rayAngle, enemies);
+                if (hit != null) {
+                    hit.takeDamage(currentWeapon.damage, rayAngle);
+                }
+            }
+        } else {
+            game.Enemy hit = castShot(angle, enemies);
             if (hit != null) {
-                hit.takeDamage(currentWeapon.damage, rayAngle);
-
+                hit.takeDamage(currentWeapon.damage, angle);
             }
         }
+
     }
+
 
 
 
