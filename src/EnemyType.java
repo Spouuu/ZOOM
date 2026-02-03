@@ -1,8 +1,8 @@
 package game;
 
 public enum EnemyType {
-    GUARD(300, 20, 1000, "/sprites/guard.png"),
-    ELITE(600, 40, 600, "/sprites/elite.png");
+    GUARD(100, 10, 2000, "/sprites/guard.png"),
+    ELITE(200, 20, 1500, "/sprites/elite.png");
 
 
     public final int hp;

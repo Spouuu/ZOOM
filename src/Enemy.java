@@ -35,10 +35,30 @@ public class Enemy {
         this.type = type;
         this.health = type.hp;
     }
-    public boolean canSeePlayer(game.Player player) {
-        double distance = Math.hypot(player.x - x, player.y - y);
-        return distance < 6.0;
+    public boolean canSeePlayer(game.Player player, game.Map map) {
+        double dx = player.x - x;
+        double dy = player.y - y;
+        double distance = Math.hypot(dx, dy);
+
+        // krok co 0.05 jednostki wzdłuż linii do gracza
+        double stepX = dx / distance * 0.05;
+        double stepY = dy / distance * 0.05;
+
+        double checkX = x;
+        double checkY = y;
+
+        for (double i = 0; i < distance; i += 0.05) {
+            checkX += stepX;
+            checkY += stepY;
+            if (map.isWall(checkX, checkY)) {
+                return false; // ściana blokuje widoczność
+            }
+        }
+
+        return true; // nic nie blokuje, gracz jest widoczny
     }
+
+
 
     private double normalizeAngle(double a) {
         while (a < -Math.PI) a += Math.PI * 2;
@@ -56,20 +76,19 @@ public class Enemy {
             state = State.IDLE;
         }
 
-        if (canSeePlayer(player) && canShoot()) {
-            markShot();
-            shootPlayer(player);
-            state = State.SHOOT;
+        // sprawdzanie widoczności i strzelania
+        if (canSeePlayer(player, map)) {
+            tryShoot(player, map);
         }
-
-        tryShoot(player, map);
     }
+
     public void shootPlayer(game.Player player) {
         double dist = Math.hypot(player.x - x, player.y - y);
         if (dist < 5.0) {
-            player.hp -= 10;
+            player.takeDamage(type.damage);  // use EnemyType damage
         }
     }
+
 
 
     public boolean canShoot() {
@@ -135,6 +154,7 @@ public class Enemy {
             state = State.DEAD;
         }
     }
+
 
     private boolean hasLineOfSight(game.Player p, game.Map map) {
         double dx = p.x - x;

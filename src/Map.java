@@ -1,92 +1,102 @@
 package game;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Map {
+    private char[][] tiles;
+    private int width, height;
+    private List<game.Enemy> enemies = new ArrayList<>();
+    private List<game.Door> doors = new ArrayList<>();
 
-    private char[][] grid;
-    public int width;
-    public int height;
 
     public Map(String path) throws Exception {
-        load(path);
-    }
-
-    private void load(String path) throws Exception {
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader(getClass().getResourceAsStream(path))
-        );
-
+        InputStream is = getClass().getResourceAsStream(path);
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        List<String> lines = new ArrayList<>();
         String line;
-        int rows = 0;
-        int cols = 0;
-
         while ((line = br.readLine()) != null) {
-            cols = line.length();
-            rows++;
+            lines.add(line);
         }
-        br.close();
+        height = lines.size();
+        width = lines.get(0).length();
+        tiles = new char[width][height];
 
-        grid = new char[rows][cols];
-        height = rows;
-        width = cols;
+        for (int y = 0; y < height; y++) {
+            String row = lines.get(y);
+            for (int x = 0; x < width; x++) {
+                char c = row.charAt(x);
+                tiles[x][y] = (c == 'G' || c == 'E') ? '0' : c; // floor where enemy spawns
+                if (c == 'D') {
+                    doors.add(new game.Door(x, y));
+                    tiles[x][y] = 'D';
+                } else {
+                    tiles[x][y] = (c == 'G' || c == 'E') ? '0' : c;
+                }
 
-        br = new BufferedReader(
-                new InputStreamReader(getClass().getResourceAsStream(path))
-        );
 
-        int y = 0;
-        while ((line = br.readLine()) != null) {
-            for (int x = 0; x < line.length(); x++) {
-                grid[y][x] = line.charAt(x);
+                // Spawn enemies
+                if (c == 'G') {
+                    enemies.add(new game.Enemy(x + 0.5, y + 0.5, new game.RandomOrthogonalBehavior(), game.EnemyType.GUARD));
+                } else if (c == 'E') {
+                    enemies.add(new game.Enemy(x + 0.5, y + 0.5, new game.RandomOrthogonalBehavior(), game.EnemyType.ELITE));
+                }
             }
-            y++;
-        }
-        br.close();
-    }
-
-    public boolean isWall(double x, double y) {
-        int mx = (int) x;
-        int my = (int) y;
-
-        if (mx < 0 || my < 0 || my >= height || mx >= width) {
-            return true;
-        }
-
-        return grid[my][mx] == '1' || grid[my][mx] == 'D';
-    }
-
-    public boolean isDoor(double x, double y) {
-        int mx = (int) x;
-        int my = (int) y;
-
-        if (mx < 0 || my < 0 || my >= height || mx >= width) {
-            return false;
-        }
-
-        return grid[my][mx] == 'D';
-    }
-
-    public void openDoor(double x, double y) {
-        int mx = (int) x;
-        int my = (int) y;
-
-        if (mx < 0 || my < 0 || my >= height || mx >= width) return;
-
-        if (grid[my][mx] == 'D') {
-            grid[my][mx] = '0';
         }
     }
 
     public char getTile(double x, double y) {
-        int mx = (int) x;
-        int my = (int) y;
+        int ix = (int)x;
+        int iy = (int)y;
+        if (ix < 0 || iy < 0 || ix >= width || iy >= height) return '1';
+        return tiles[ix][iy];
+    }
 
-        if (mx < 0 || my < 0 || my >= height || mx >= width) {
-            return '1';
+    public boolean isWall(double x, double y) {
+        char c = getTile(x, y);
+        return c == '1';
+    }
+    public game.Door getDoor(double x, double y) {
+        int ix = (int) x;
+        int iy = (int) y;
+
+        for (game.Door d : doors) {
+            if (d.tileX == ix && d.tileY == iy && !d.open) {
+                return d;
+            }
         }
+        return null;
+    }
 
-        return grid[my][mx];
+    public boolean isDoor(double x, double y) {
+        game.Door d = getDoor(x, y);
+        return d != null && d.offsetX > -0.95;
+    }
+
+
+
+
+    public void openDoor(double x, double y) {
+        game.Door d = getDoor(x, y);
+        if (d != null && !d.open && !d.opening) {
+            d.opening = true;
+        }
+    }
+    public void update() {
+        for (game.Door d : doors) {
+            d.update();
+
+            if (d.open) {
+                tiles[d.tileX][d.tileY] = '0'; // zwolnienie przejścia
+            }
+        }
+    }
+
+
+    public List<game.Enemy> getEnemies() {
+        return enemies;
     }
 }

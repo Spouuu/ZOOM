@@ -1,6 +1,8 @@
 package game;
 
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.util.List;
 
 public class Player {
 
@@ -8,10 +10,15 @@ public class Player {
     public double angle;
 
     public int hp = 100;
+    public int maxHp = 100;
     public int ammo = 50;
     public boolean hasKey = false;
-    private long lastShotTime = 0;
-    private static final long SHOOT_COOLDOWN = 2000; // 3 sekundy
+    public long lastShotTime = 0;
+    private static final long SHOOT_COOLDOWN = 250;
+    public int level = 1;       // aktualny level
+    public int xp = 0;          // aktualne XP
+    public int xpToNextLevel = 100; // XP wymagane do następnego levelu
+    public game.Weapon currentWeapon = new game.Weapon(game.WeaponType.PISTOL);
 
 
 
@@ -21,6 +28,8 @@ public class Player {
         this.x = x;
         this.y = y;
         this.angle = angle;
+
+
     }
 
     public void update(game.Map map) {
@@ -44,6 +53,7 @@ public class Player {
             x = nx;
             y = ny;
         }
+        
     }
 
     public void takeDamage(int dmg) {
@@ -53,10 +63,47 @@ public class Player {
     public boolean canShoot() {
         return System.currentTimeMillis() - lastShotTime >= SHOOT_COOLDOWN;
     }
+    private game.Enemy castShot(double rayAngle, List<game.Enemy> enemies) {
+        game.Enemy closest = null;
+        double minDist = Double.MAX_VALUE;
 
-    public void markShot() {
-        lastShotTime = System.currentTimeMillis();
+        for (game.Enemy e : enemies) {
+            if (!e.alive) continue;
+
+            double dx = e.x - x;
+            double dy = e.y - y;
+            double dist = Math.hypot(dx, dy);
+
+            double a = Math.atan2(dy, dx) - rayAngle;
+            if (Math.abs(a) < 0.1 && dist < minDist) {
+                closest = e;
+                minDist = dist;
+            }
+        }
+        return closest;
     }
+
+
+    public void shoot(List<game.Enemy> enemies) {
+        if (!currentWeapon.canShoot()) return;
+
+        currentWeapon.lastShot = System.currentTimeMillis();
+
+        for (int i = 0; i < currentWeapon.pellets; i++) {
+
+            double angleOffset =
+                    (Math.random() - 0.5) * currentWeapon.spread;
+
+            double rayAngle = angle + angleOffset;
+
+            game.Enemy hit = castShot(rayAngle, enemies);
+            if (hit != null) {
+                hit.takeDamage(currentWeapon.damage, rayAngle);
+
+            }
+        }
+    }
+
 
 
     public void keyPressed(KeyEvent e) {
@@ -72,4 +119,5 @@ public class Player {
         if (e.getKeyCode() == KeyEvent.VK_A) left = false;
         if (e.getKeyCode() == KeyEvent.VK_D) right = false;
     }
+
 }
