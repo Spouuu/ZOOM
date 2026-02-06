@@ -2,7 +2,9 @@ package game;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.util.*;
 import java.util.List;
+import java.util.EnumSet;
 
 public class Player {
 
@@ -11,7 +13,6 @@ public class Player {
 
     public int hp = 100;
     public int maxHp = 100;
-    public int ammo = 50;
     public boolean shooting = false;
     public long shootAnimTime = 0;
     public boolean hasKey = false;
@@ -21,6 +22,12 @@ public class Player {
     public int xp = 0;          // aktualne XP
     public int xpToNextLevel = 100; // XP wymagane do następnego levelu
     public game.Weapon currentWeapon = new game.Weapon(game.WeaponType.PISTOL);
+    public boolean shotgunZoom;
+    public EnumSet<game.WeaponType> weapons = EnumSet.of(game.WeaponType.PISTOL);
+    public EnumMap<game.AmmoType, Integer> ammo = new EnumMap<>(game.AmmoType.class);
+
+
+
 
 
 
@@ -30,6 +37,10 @@ public class Player {
         this.x = x;
         this.y = y;
         this.angle = angle;
+        weapons.add(game.WeaponType.PISTOL);
+        ammo.put(game.AmmoType.BULLETS, 50);
+        ammo.put(game.AmmoType.SHELLS, 0);
+
 
 
     }
@@ -39,6 +50,9 @@ public class Player {
 
         double nx = x;
         double ny = y;
+
+        checkWeaponPickups(map);
+        checkAmmoPickups(map);
 
         if (forward) {
             nx += Math.cos(angle) * speed;
@@ -55,8 +69,8 @@ public class Player {
             x = nx;
             y = ny;
         }
-        
     }
+
 
     public void takeDamage(int dmg) {
         hp -= dmg;
@@ -85,16 +99,46 @@ public class Player {
         return closest;
     }
 
+    public void checkWeaponPickups(game.Map map) {
+        for (game.WeaponPickup wp : map.getWeaponPickups()) {
+            if (wp.taken) continue;
+
+            double dx = wp.x - x;
+            double dy = wp.y - y;
+
+            if (Math.hypot(dx, dy) < 0.6) {
+                takeWeapon(wp.type);
+                wp.taken = true;
+            }
+        }
+    }
+
+    private void takeWeapon(game.WeaponType type) {
+        if (!weapons.contains(type)) {
+            weapons.add(type);
+        }
+        currentWeapon = new game.Weapon(type);
+    }
+
 
     public void shoot(List<game.Enemy> enemies) {
         if (!canShoot()) return;
 
+        game.AmmoType ammoType = currentWeapon.type.ammoType();
+        if (ammo.getOrDefault(ammoType, 0) <= 0)
+            return;
+
         lastShotTime = System.currentTimeMillis();
+        ammo.put(ammoType, ammo.get(ammoType) - 1);
 
         if (currentWeapon.type == game.WeaponType.SHOTGUN) {
-            for (int i = 0; i < 6; i++) {
-                double spread = (Math.random() - 0.5) * 0.4;
-                double rayAngle = angle + spread;
+            for (int i = 0; i < currentWeapon.type.pellets; i++) {
+                double spread = currentWeapon.spread;
+
+                if (shotgunZoom)
+                    spread *= 0.35;
+
+                double rayAngle = angle + (Math.random() - 0.5) * spread;
 
                 game.Enemy hit = castShot(rayAngle, enemies);
                 if (hit != null) {
@@ -107,8 +151,23 @@ public class Player {
                 hit.takeDamage(currentWeapon.damage, angle);
             }
         }
-
     }
+
+    public void checkAmmoPickups(game.Map map) {
+        for (game.AmmoPickup ap : map.getAmmoPickups()) {
+            if (ap.taken) continue;
+
+            if (Math.hypot(ap.x - x, ap.y - y) < 0.6) {
+                ammo.put(
+                        ap.type,
+                        ammo.getOrDefault(ap.type, 0) + ap.amount
+                );
+                ap.taken = true;
+            }
+        }
+    }
+
+
 
 
 

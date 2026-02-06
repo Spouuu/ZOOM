@@ -14,4 +14,10 @@ public enum WeaponType {
         this.cooldown = cooldown;
         this.pellets = pellets;
     }
+    public game.AmmoType ammoType() {
+        return switch (this) {
+            case PISTOL, CHAINGUN -> game.AmmoType.BULLETS;
+            case SHOTGUN -> game.AmmoType.SHELLS;
+        };
+    }
 }

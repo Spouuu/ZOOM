@@ -14,17 +14,19 @@ public class Weapon {
 
         switch (type) {
             case PISTOL -> {
-                damage = 20;
+                damage = 25;
                 fireDelay = 400;
                 spread = 0.01;
                 pellets = 1;
             }
+
             case SHOTGUN -> {
                 damage = 10;
-                fireDelay = 800;
-                spread = 0.08;
+                fireDelay = 900;
+                spread = 0.12;
                 pellets = 6;
             }
+
             case CHAINGUN -> {
                 damage = 8;
                 fireDelay = 120;
@@ -33,6 +35,7 @@ public class Weapon {
             }
         }
     }
+
 
     public boolean canShoot() {
         return System.currentTimeMillis() - lastShot >= fireDelay;

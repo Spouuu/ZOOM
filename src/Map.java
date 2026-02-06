@@ -24,28 +24,58 @@ public class Map {
         height = lines.size();
         width = lines.get(0).length();
         tiles = new char[width][height];
-
         for (int y = 0; y < height; y++) {
             String row = lines.get(y);
             for (int x = 0; x < width; x++) {
                 char c = row.charAt(x);
-                tiles[x][y] = (c == 'G' || c == 'E') ? '0' : c; // floor where enemy spawns
+
+                // DOMYŚLNIE PODŁOGA
+                tiles[x][y] = '0';
+
+                if (c == '1') {
+                    tiles[x][y] = '1';
+                }
+
                 if (c == 'D') {
                     doors.add(new game.Door(x, y));
                     tiles[x][y] = 'D';
-                } else {
-                    tiles[x][y] = (c == 'G' || c == 'E') ? '0' : c;
                 }
 
+                if (c == 'S') {
+                    weaponPickups.add(
+                            new game.WeaponPickup(x + 0.5, y + 0.5, game.WeaponType.SHOTGUN)
+                    );
+                }
 
-                // Spawn enemies
+                if (c == 'B') {
+                    ammoPickups.add(
+                            new game.AmmoPickup(x + 0.5, y + 0.5, game.AmmoType.BULLETS, 20)
+                    );
+                }
+
+                if (c == 'A') {
+                    ammoPickups.add(
+                            new game.AmmoPickup(x + 0.5, y + 0.5, game.AmmoType.SHELLS, 8)
+                    );
+                }
+
                 if (c == 'G') {
-                    enemies.add(new game.Enemy(x + 0.5, y + 0.5, new game.RandomOrthogonalBehavior(), game.EnemyType.GUARD));
-                } else if (c == 'E') {
-                    enemies.add(new game.Enemy(x + 0.5, y + 0.5, new game.RandomOrthogonalBehavior(), game.EnemyType.ELITE));
+                    enemies.add(new game.Enemy(x + 0.5, y + 0.5,
+                            new game.RandomOrthogonalBehavior(), game.EnemyType.GUARD));
+                }
+
+                if (c == 'E') {
+                    enemies.add(new game.Enemy(x + 0.5, y + 0.5,
+                            new game.RandomOrthogonalBehavior(), game.EnemyType.ELITE));
                 }
             }
         }
+
+    }
+   private List<game.AmmoPickup> ammoPickups = new ArrayList<>();
+
+    public List<game.AmmoPickup> getAmmoPickups() {
+        return ammoPickups;
     }
 
     public char getTile(double x, double y) {
@@ -76,6 +106,12 @@ public class Map {
         return d != null && d.offsetX > -0.95;
     }
 
+
+    private List<game.WeaponPickup> weaponPickups = new ArrayList<>();
+
+    public List<game.WeaponPickup> getWeaponPickups() {
+        return weaponPickups;
+    }
 
 
 

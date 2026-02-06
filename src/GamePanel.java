@@ -40,6 +40,10 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     private BufferedImage currentWeaponSprite;
     private BufferedImage shotgunIdle;
     private BufferedImage shotgunShoot;
+    private BufferedImage pickupShotgun;
+    private BufferedImage bulletsPickup;
+    private BufferedImage shellsPickup;
+
 
 
 
@@ -53,6 +57,19 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         int b = (int)(c1.getBlue()  * (1 - t) + c2.getBlue()  * t);
         return new Color(r, g, b);
     }
+
+    // RECOIL
+    private double recoil = 0;
+    private double recoilVelocity = 0;
+    // ZOOM (ADS)
+    private boolean shotgunZoom = false;
+
+    private static final double FOV_NORMAL = Math.PI / 3;      // 60°
+    private static final double FOV_ZOOM   = Math.PI / 10;      // 30°
+
+    private double currentFov = FOV_NORMAL;
+
+
 
 
     public GamePanel() {
@@ -92,6 +109,9 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             pistolShoot = ImageIO.read(getClass().getResource("/sprites/weapons/pistol-shoot.png"));
             shotgunIdle  = ImageIO.read(getClass().getResource("/sprites/weapons/shotgun-idle.png"));
             shotgunShoot = ImageIO.read(getClass().getResource("/sprites/weapons/shotgun-shoot.png"));
+            pickupShotgun = ImageIO.read(getClass().getResource("/sprites/pickups/shotgun.png"));
+            bulletsPickup = ImageIO.read(getClass().getResource("/sprites/pickups/bullets.png"));
+            shellsPickup  = ImageIO.read(getClass().getResource("/sprites/pickups/shells.png"));
 
 
             currentWeaponSprite = pistolIdle;
@@ -110,6 +130,28 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         thread.start();
     }
 
+    private void drawWeaponPickups(Graphics2D g) {
+        for (game.WeaponPickup wp : map.getWeaponPickups()) {
+            if (wp.taken) continue;
+
+            double dx = wp.x - player.x;
+            double dy = wp.y - player.y;
+            double dist = Math.hypot(dx, dy);
+
+            double angle = Math.atan2(dy, dx) - player.angle;
+            if (Math.abs(angle) > FOV / 2) continue;
+
+            int sx = (int)((angle + FOV/2) / FOV * WIDTH);
+            if (dist > zBuffer[sx]) continue;
+
+            int size = (int)(HEIGHT / dist);
+            int sy = HEIGHT / 2 - size / 2;
+
+            g.drawImage(pickupShotgun, sx - size/2, sy, size, size, null);
+        }
+    }
+
+
     @Override
     public void run() {
         while (running) {
@@ -120,13 +162,22 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     }
 
     private void update() {
-        map.update();          // 👈 TO MUSI BYĆ
+        map.update();
         player.update(map);
 
-        for (game.Enemy e : enemies) {
+        for (game.Enemy e : enemies)
             e.update(player, map);
-        }
+
+        updateRecoil();
+        updateZoom();
+
+
     }
+    private void updateZoom() {
+        double targetFov = shotgunZoom ? FOV_ZOOM : FOV_NORMAL;
+        currentFov += (targetFov - currentFov) * 0.15;
+    }
+
 
     private void drawWeapon(Graphics2D g) {
         int weaponWidth = 256;
@@ -138,12 +189,46 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         }
 
         int x = WIDTH / 2 - weaponWidth / 2;
-        int y = HEIGHT - weaponHeight;
+        int y = HEIGHT - weaponHeight - (int) recoil;
+
+        if (shotgunZoom)
+            y += 30;
+
 
         g.drawImage(currentWeaponSprite, x, y, weaponWidth, weaponHeight, null);
     }
 
+    private double getRecoilStrength() {
+        return switch (player.currentWeapon.type) {
+            case PISTOL -> 12;
+            case SHOTGUN -> 28;
+            default -> 10;
+        };
+    }
 
+    private void drawAmmoPickups(Graphics2D g) {
+        for (game.AmmoPickup ap : map.getAmmoPickups()) {
+            if (ap.taken) continue;
+
+            double dx = ap.x - player.x;
+            double dy = ap.y - player.y;
+            double dist = Math.hypot(dx, dy);
+
+            double angle = Math.atan2(dy, dx) - player.angle;
+            if (Math.abs(angle) > currentFov / 2) continue;
+
+            int sx = (int)((angle + currentFov/2) / currentFov * WIDTH);
+            if (dist > zBuffer[sx]) continue;
+
+            int size = (int)(HEIGHT / dist);
+            int sy = HEIGHT / 2 - size / 2;
+
+            BufferedImage img =
+                    ap.type == game.AmmoType.BULLETS ? bulletsPickup : shellsPickup;
+
+            g.drawImage(img, sx - size/2, sy, size, size, null);
+        }
+    }
 
 
 
@@ -160,6 +245,9 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
 
         castRays(g);
         drawEnemies(g);
+        drawWeaponPickups(g);
+        drawAmmoPickups(g);
+
 
         drawHUD(g);  // <-- dodajemy HUD z HP i level
 
@@ -243,6 +331,12 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             double t = hpRatio * 2; // 0..1
             fillColor = lerpColor(endColor, midColor, t);
         }
+        int bullets = player.ammo.get(game.AmmoType.BULLETS);
+        int shells  = player.ammo.get(game.AmmoType.SHELLS);
+
+        g.drawString("Bullets: " + bullets, x, y - 30);
+        g.drawString("Shells: " + shells, x, y - 45);
+
 
         g.setColor(fillColor);
         g.fillRect(x, y, (int)(barWidth * hpRatio), barHeight);
@@ -276,7 +370,7 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
 
     private void castRays(Graphics2D g) {
         for (int x = 0; x < WIDTH; x++) {
-            double rayAngle = player.angle - FOV / 2 + (double) x / WIDTH * FOV;
+            double rayAngle = player.angle - currentFov / 2 + (double) x / WIDTH * currentFov;
 
             double rx = player.x;
             double ry = player.y;
@@ -357,9 +451,24 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             currentWeaponSprite = pistolIdle;
         }
 
-        if (e.getKeyCode() == KeyEvent.VK_2) {
+        if (e.getKeyCode() == KeyEvent.VK_2 &&
+                player.weapons.contains(game.WeaponType.SHOTGUN)) {
+
             player.currentWeapon = new game.Weapon(game.WeaponType.SHOTGUN);
             currentWeaponSprite = shotgunIdle;
+        }
+
+    }
+    private void updateRecoil() {
+        recoil += recoilVelocity;
+        recoilVelocity *= 0.6;   // tłumienie
+
+        // powrót do zera
+        recoil *= 0.8;
+
+        if (Math.abs(recoil) < 0.1) {
+            recoil = 0;
+            recoilVelocity = 0;
         }
     }
 
@@ -368,29 +477,44 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         if (e.getButton() == MouseEvent.BUTTON1 && player.canShoot()) {
             player.shoot(enemies);
 
-            if (player.currentWeapon.type == game.WeaponType.PISTOL) {
+            // sprite strzału
+            if (player.currentWeapon.type == game.WeaponType.PISTOL)
                 currentWeaponSprite = pistolShoot;
-            } else if (player.currentWeapon.type == game.WeaponType.SHOTGUN) {
+            else
                 currentWeaponSprite = shotgunShoot;
-            }
+
+            // RECOIL IMPULSE
+            recoilVelocity = getRecoilStrength();
 
             new Timer(120, ev -> {
-                if (player.currentWeapon.type == game.WeaponType.PISTOL)
-                    currentWeaponSprite = pistolIdle;
-                else
-                    currentWeaponSprite = shotgunIdle;
-
+                currentWeaponSprite =
+                        player.currentWeapon.type == game.WeaponType.PISTOL
+                                ? pistolIdle
+                                : shotgunIdle;
                 ((Timer) ev.getSource()).stop();
             }).start();
         }
+        // ZOOM SHOTGUN
+        if (e.getButton() == MouseEvent.BUTTON3 &&
+                player.currentWeapon.type == game.WeaponType.SHOTGUN) {
+
+            shotgunZoom = true;
+        }
+
 
     }
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        if (e.getButton() == MouseEvent.BUTTON3) {
+            shotgunZoom = false;
+        }
+    }
+
 
 
 
     @Override public void keyReleased(KeyEvent e) { player.keyReleased(e); }
     @Override public void keyTyped(KeyEvent e) {}
-    @Override public void mouseReleased(MouseEvent e) {}
     @Override public void mouseEntered(MouseEvent e) {}
     @Override public void mouseExited(MouseEvent e) {}
     @Override

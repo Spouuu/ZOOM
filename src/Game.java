@@ -8,7 +8,7 @@ public class Game {
     public static final int HEIGHT = 600;
 
     public Game() {
-        JFrame frame = new JFrame("Wolfenstein-like");
+        JFrame frame = new JFrame("Zoom");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
 
