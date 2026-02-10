@@ -13,6 +13,7 @@ import javax.swing.Timer;
 import static game.Enemy.State.DEAD;
 
 public class GamePanel extends Canvas implements Runnable, KeyListener, MouseListener {
+    private game.GameState gameState = game.GameState.MENU;
 
     public static final int WIDTH = 800;
     public static final int HEIGHT = 600;
@@ -162,6 +163,16 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     }
 
     private void update() {
+
+        if (gameState == game.GameState.MENU) {
+            return;
+        }
+
+        if (gameState == game.GameState.GAME_OVER) {
+            return;
+        }
+
+        // PLAYING
         map.update();
         player.update(map);
 
@@ -171,8 +182,11 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         updateRecoil();
         updateZoom();
 
-
+        if (player.hp <= 0) {
+            gameState = game.GameState.GAME_OVER;
+        }
     }
+
     private void updateZoom() {
         double targetFov = shotgunZoom ? FOV_ZOOM : FOV_NORMAL;
         currentFov += (targetFov - currentFov) * 0.15;
@@ -229,7 +243,32 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             g.drawImage(img, sx - size/2, sy, size, size, null);
         }
     }
+    private void drawGameOver(Graphics2D g) {
+        g.setColor(new Color(0, 0, 0, 200));
+        g.fillRect(0, 0, WIDTH, HEIGHT);
 
+        g.setColor(Color.RED);
+        g.setFont(new Font("Arial", Font.BOLD, 48));
+        g.drawString("GAME OVER", WIDTH / 2 - 150, HEIGHT / 2);
+
+        g.setFont(new Font("Arial", Font.PLAIN, 24));
+        g.setColor(Color.WHITE);
+        g.drawString("ENTER - RESTART", WIDTH / 2 - 110, HEIGHT / 2 + 50);
+    }
+
+    private void drawMenu(Graphics2D g) {
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, WIDTH, HEIGHT);
+
+        g.setColor(Color.RED);
+        g.setFont(new Font("Arial", Font.BOLD, 48));
+        g.drawString("ZOOM", WIDTH / 2 - 120, 200);
+
+        g.setFont(new Font("Arial", Font.PLAIN, 24));
+        g.setColor(Color.WHITE);
+        g.drawString("ENTER - START", WIDTH / 2 - 90, 300);
+        g.drawString("ESC - EXIT", WIDTH / 2 - 80, 340);
+    }
 
 
     private void render() {
@@ -240,20 +279,31 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         }
 
         Graphics2D g = (Graphics2D) bs.getDrawGraphics();
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, WIDTH, HEIGHT);
 
-        castRays(g);
-        drawEnemies(g);
-        drawWeaponPickups(g);
-        drawAmmoPickups(g);
+        if (gameState == game.GameState.MENU) {
+            drawMenu(g);
+        }
+        else if (gameState == game.GameState.GAME_OVER) {
+            castRays(g);
+            drawEnemies(g);
+            drawHUD(g);
+            drawGameOver(g);
+        }
+        else {
+            g.setColor(Color.BLACK);
+            g.fillRect(0, 0, WIDTH, HEIGHT);
 
-
-        drawHUD(g);  // <-- dodajemy HUD z HP i level
+            castRays(g);
+            drawEnemies(g);
+            drawWeaponPickups(g);
+            drawAmmoPickups(g);
+            drawHUD(g);
+        }
 
         g.dispose();
         bs.show();
     }
+
     private void drawEnemies(Graphics2D g) {
         for (game.Enemy e : enemies) {
 
@@ -439,13 +489,52 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             map.openDoor(tx, ty);
         }
     }
+    private void restartGame() {
+        player = new game.Player(3, 1, 0);
+
+        try {
+            map = new game.Map("/levels/level1.txt");
+            enemies = map.getEnemies();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        recoil = 0;
+        recoilVelocity = 0;
+        shotgunZoom = false;
+        currentWeaponSprite = pistolIdle;
+    }
 
     @Override
     public void keyPressed(KeyEvent e) {
+
+        // ===== MENU =====
+        if (gameState == game.GameState.MENU) {
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                restartGame();
+                gameState = game.GameState.PLAYING;
+            }
+            if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                System.exit(0);
+            }
+            return;
+        }
+
+        // ===== GAME OVER =====
+        if (gameState == game.GameState.GAME_OVER) {
+            if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                restartGame();
+                gameState = game.GameState.PLAYING;
+            }
+            return;
+        }
+
+        // ===== PLAYING =====
         if (e.getKeyCode() == KeyEvent.VK_E) {
             tryOpenDoor();
         }
-        player.keyPressed(e);
+
         if (e.getKeyCode() == KeyEvent.VK_1) {
             player.currentWeapon = new game.Weapon(game.WeaponType.PISTOL);
             currentWeaponSprite = pistolIdle;
@@ -453,12 +542,14 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
 
         if (e.getKeyCode() == KeyEvent.VK_2 &&
                 player.weapons.contains(game.WeaponType.SHOTGUN)) {
-
             player.currentWeapon = new game.Weapon(game.WeaponType.SHOTGUN);
             currentWeaponSprite = shotgunIdle;
         }
 
+        player.keyPressed(e);
     }
+
+
     private void updateRecoil() {
         recoil += recoilVelocity;
         recoilVelocity *= 0.6;   // tłumienie
