@@ -45,6 +45,8 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     private BufferedImage bulletsPickup;
     private BufferedImage shellsPickup;
 
+    private BufferedImage logo;
+
 
 
 
@@ -113,6 +115,8 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             pickupShotgun = ImageIO.read(getClass().getResource("/sprites/pickups/shotgun.png"));
             bulletsPickup = ImageIO.read(getClass().getResource("/sprites/pickups/bullets.png"));
             shellsPickup  = ImageIO.read(getClass().getResource("/sprites/pickups/shells.png"));
+
+            logo = ImageIO.read(getClass().getResource("/logo.png"));
 
 
             currentWeaponSprite = pistolIdle;
@@ -260,14 +264,28 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, WIDTH, HEIGHT);
 
-        g.setColor(Color.RED);
-        g.setFont(new Font("Arial", Font.BOLD, 48));
-        g.drawString("ZOOM", WIDTH / 2 - 120, 200);
+        // ===== LOGO =====
+        int logoW = 256;
+        int logoH = 128;
 
-        g.setFont(new Font("Arial", Font.PLAIN, 24));
+        int logoX = (WIDTH - logoW) / 2;
+        int logoY = HEIGHT / 3 + (int)(Math.sin(System.currentTimeMillis() * 0.003) * 5);
+
+
+        g.drawImage(logo, logoX, logoY, null);
+
+        // ===== TEKST =====
         g.setColor(Color.WHITE);
-        g.drawString("ENTER - START", WIDTH / 2 - 90, 300);
-        g.drawString("ESC - EXIT", WIDTH / 2 - 80, 340);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+
+        String start = "ENTER - Start";
+        String exit  = "ESC - Exit";
+
+        int sx = WIDTH / 2 - g.getFontMetrics().stringWidth(start) / 2;
+        int ex = WIDTH / 2 - g.getFontMetrics().stringWidth(exit) / 2;
+
+        g.drawString(start, sx, logoY + 120);
+        g.drawString(exit,  ex, logoY + 150);
     }
 
 
