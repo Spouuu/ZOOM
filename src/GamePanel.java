@@ -430,10 +430,6 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
 
         g.setColor(Color.WHITE);
         g.drawRect(x, xpY, barWidth, xpBarHeight);
-
-        // Poziom gracza
-        g.setColor(Color.WHITE);
-        g.drawString("Level: " + player.level, x, y - 5);
     }
 
     private void castRays(Graphics2D g) {

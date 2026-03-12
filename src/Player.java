@@ -13,19 +13,15 @@ public class Player {
 
     public int hp = 100;
     public int maxHp = 100;
-    public boolean shooting = false;
-    public long shootAnimTime = 0;
-    public boolean hasKey = false;
     public long lastShotTime = 0;
     private static final long SHOOT_COOLDOWN = 250;
-    public int level = 1;       // aktualny level
     public int xp = 0;          // aktualne XP
     public int xpToNextLevel = 100; // XP wymagane do następnego levelu
     public game.Weapon currentWeapon = new game.Weapon(game.WeaponType.PISTOL);
     public boolean shotgunZoom;
     public EnumSet<game.WeaponType> weapons = EnumSet.of(game.WeaponType.PISTOL);
     public EnumMap<game.AmmoType, Integer> ammo = new EnumMap<>(game.AmmoType.class);
-
+    public int health = 20;
 
 
 
@@ -161,6 +157,19 @@ public class Player {
                 ammo.put(
                         ap.type,
                         ammo.getOrDefault(ap.type, 0) + ap.amount
+                );
+                ap.taken = true;
+            }
+        }
+    }
+
+    public void checkHealthPickups(game.Map map) {
+        for (game.HealthPickup ap : map.getHealthPickups()) {
+            if (ap.taken) continue;
+
+            if (Math.hypot(ap.x - x, ap.y - y) < 0.6) {
+                health.put(
+                        health.getOrDefault( 0) + ap.amount
                 );
                 ap.taken = true;
             }
