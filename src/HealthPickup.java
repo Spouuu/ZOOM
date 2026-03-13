@@ -1,7 +1,9 @@
 package game;
 
 public class HealthPickup {
-    public double x, y;
+
+    public double x;
+    public double y;
     public int amount;
     public boolean taken = false;
 

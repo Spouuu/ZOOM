@@ -44,6 +44,7 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
     private BufferedImage pickupShotgun;
     private BufferedImage bulletsPickup;
     private BufferedImage shellsPickup;
+    private BufferedImage healthPickup;
 
     private BufferedImage logo;
 
@@ -113,8 +114,11 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             shotgunIdle  = ImageIO.read(getClass().getResource("/sprites/weapons/shotgun-idle.png"));
             shotgunShoot = ImageIO.read(getClass().getResource("/sprites/weapons/shotgun-shoot.png"));
             pickupShotgun = ImageIO.read(getClass().getResource("/sprites/pickups/shotgun.png"));
+
+            //Pickups sprites
             bulletsPickup = ImageIO.read(getClass().getResource("/sprites/pickups/bullets.png"));
-            shellsPickup  = ImageIO.read(getClass().getResource("/sprites/pickups/shells.png"));
+            shellsPickup = ImageIO.read(getClass().getResource("/sprites/pickups/shells.png"));
+            healthPickup = ImageIO.read(getClass().getResource("/sprites/pickups/health.png"));
 
             logo = ImageIO.read(getClass().getResource("/logo.png"));
 
@@ -216,6 +220,28 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
         g.drawImage(currentWeaponSprite, x, y, weaponWidth, weaponHeight, null);
     }
 
+    private void drawHealthPickups(Graphics2D g) {
+        for (game.HealthPickup hp : map.getHealthPickups()) {
+            if (hp.taken) continue;
+
+            double dx = hp.x - player.x;
+            double dy = hp.y - player.y;
+            double dist = Math.hypot(dx, dy);
+
+            double angle = Math.atan2(dy, dx) - player.angle;
+            if (Math.abs(angle) > currentFov / 2) continue;
+
+            int sx = (int)((angle + currentFov/2) / currentFov * WIDTH);
+            if (dist > zBuffer[sx]) continue;
+
+            int size = (int)(HEIGHT / dist);
+            int sy = HEIGHT / 2 - size / 2;
+
+            g.drawImage(healthPickup, sx - size/2, sy, size, size, null);
+        }
+    }
+
+
     private double getRecoilStrength() {
         return switch (player.currentWeapon.type) {
             case PISTOL -> 12;
@@ -315,6 +341,7 @@ public class GamePanel extends Canvas implements Runnable, KeyListener, MouseLis
             drawEnemies(g);
             drawWeaponPickups(g);
             drawAmmoPickups(g);
+            drawHealthPickups(g);
             drawHUD(g);
         }
 

@@ -59,6 +59,12 @@ public class Map {
                     );
                 }
 
+                if (c == 'H') {
+                    healthPickups.add(
+                            new game.HealthPickup(x + 0.5, y + 0.5, 25)
+                    );
+                }
+
                 if (c == 'G') {
                     enemies.add(new game.Enemy(x + 0.5, y + 0.5,
                             new game.RandomOrthogonalBehavior(), game.EnemyType.GUARD));
@@ -129,6 +135,12 @@ public class Map {
                 tiles[d.tileX][d.tileY] = '0'; // zwolnienie przejścia
             }
         }
+    }
+
+    private List<game.HealthPickup> healthPickups = new ArrayList<>();
+
+    public List<game.HealthPickup> getHealthPickups() {
+        return healthPickups;
     }
 
 
