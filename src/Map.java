@@ -78,7 +78,7 @@ public class Map {
         }
 
     }
-   private List<game.AmmoPickup> ammoPickups = new ArrayList<>();
+    private List<game.AmmoPickup> ammoPickups = new ArrayList<>();
 
     public List<game.AmmoPickup> getAmmoPickups() {
         return ammoPickups;
